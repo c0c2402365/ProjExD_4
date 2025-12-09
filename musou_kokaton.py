@@ -72,6 +72,8 @@ class Bird(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = xy
         self.speed = 10
+        self.state = "normal"  # 状態の変数
+        self.hyper_life = 0  # 発動時間の変数
 
     def change_img(self, num: int, screen: pg.Surface):
         """
@@ -99,6 +101,11 @@ class Bird(pg.sprite.Sprite):
         if not (sum_mv[0] == 0 and sum_mv[1] == 0):
             self.dire = tuple(sum_mv)
             self.image = self.imgs[self.dire]
+        if self.state == "hyper":  # 無敵状態時処理
+            self.image = pg.transform.laplacian(self.image)  # 画像切り替え
+            self.hyper_life -= 1
+            if self.hyper_life < 0:  # 0未満なら
+                self.state = "normal"
         screen.blit(self.image, self.rect)
 
 
@@ -329,6 +336,10 @@ def main():
                 if score.value >= 20:  # スコアが20以上の場合
                     emp.activate()  # EMP発動をさせる
                     score.value -= 20  # スコアを20消費する
+            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value >= 100:  # 無敵状態発動条件 
+                bird.state = "hyper"
+                bird.hyper_life = 500  # 発動時間
+                score.value -= 100  # 消費スコア
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -368,6 +379,15 @@ def main():
                 time.sleep(2) # 2秒間表示
                 return
 
+            if bird.state == "hyper":  # 無敵状態の場合
+                exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+                score.value += 1  # 1点アップ
+            else:
+                bird.change_img(8, screen)  # こうかとん悲しみエフェクト
+                score.update(screen)
+                pg.display.update()
+                time.sleep(2)
+                return
 
         bird.update(key_lst, screen)
         beams.update()
